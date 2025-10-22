@@ -6,11 +6,7 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
-  serviceConnection: 'My-AzureRM-Conn'
-  infra_dir: 'infra'
-  rg_name: 'adti-ag'
-  location: 'eastus'
-  base_sa: 'aditiagstore' 
+- group: tf-common 
 # ================
 # 1) INIT
 # ================
