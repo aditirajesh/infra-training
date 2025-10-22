@@ -1,0 +1,129 @@
+trigger:
+  branches:
+    include: [ main ]
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  serviceConnection: 'My-AzureRM-Conn'
+  infra_dir: 'infra'
+  rg_name: 'adti-ag'
+  location: 'eastus'
+  base_sa: 'aditiagstore' 
+# ================
+# 1) INIT
+# ================
+stages:
+- stage: Init
+  displayName: Terraform Init
+  jobs:
+  - job: init
+    steps:
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: Azure login + terraform init/validate
+      inputs:
+        azureSubscription: $(serviceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -e
+          # Ensure terraform present (hosted agents usually have it)
+          terraform -version || (curl -L https://releases.hashicorp.com/terraform/1.8.5/terraform_1.8.5_linux_amd64.zip -o tf.zip && sudo unzip -o tf.zip -d /usr/local/bin)
+          cd "$(infra_dir)"
+          terraform init
+          terraform fmt -check
+          terraform validate
+
+# ================
+# 2) PLAN
+# ================
+- stage: Plan
+  displayName: Terraform Plan
+  dependsOn: Init
+  jobs:
+  - job: plan
+    steps:
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: Azure login + terraform plan
+      inputs:
+        azureSubscription: $(serviceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -e
+          terraform -version || (curl -L https://releases.hashicorp.com/terraform/1.8.5/terraform_1.8.5_linux_amd64.zip -o tf.zip && sudo unzip -o tf.zip -d /usr/local/bin)
+          cd "$(infra_dir)"
+
+          # Re-init on this fresh agent (local state is fine)
+          terraform init
+
+          # Generate a compliant unique storage account name (<=24 chars, lowercase)
+          RAND=$(head -c3 /dev/urandom | hexdump -v -e '/1 "%02x"')
+          SA_NAME="$(base_sa)${RAND}"
+          SA_NAME="${SA_NAME,,}"
+          SA_NAME="${SA_NAME:0:24}"
+          echo "Using storage account: $SA_NAME"
+          echo -n "$SA_NAME" > ../sa_name.txt
+
+          # If you use terraform.tfvars for rg/location, you can omit the -var flags
+          terraform plan -out=tfplan \
+            -var="resource_group_name=$(rg_name)" \
+            -var="location=$(location)" \
+            -var="storage_account_name=$SA_NAME"
+
+          # Package TF working dir + plan for next job
+          cd ..
+          mkdir -p plan_bundle
+          cp -r "$(infra_dir)" plan_bundle/infra
+          cp tfplan plan_bundle/
+          cp sa_name.txt plan_bundle/
+
+    - task: PublishBuildArtifacts@1
+      displayName: Publish plan bundle
+      inputs:
+        PathtoPublish: '$(Build.SourcesDirectory)/plan_bundle'
+        ArtifactName: 'tfplan-bundle'
+        publishLocation: 'Container'
+
+# ================
+# 3) APPLY
+# ================
+- stage: Apply
+  displayName: Terraform Apply
+  dependsOn: Plan
+  jobs:
+  - job: apply
+    steps:
+    - checkout: self
+
+    - task: DownloadBuildArtifacts@1
+      displayName: Download plan bundle
+      inputs:
+        buildType: 'current'
+        downloadType: 'single'
+        artifactName: 'tfplan-bundle'
+        downloadPath: '$(Build.SourcesDirectory)'
+
+    - task: AzureCLI@2
+      displayName: Azure login + terraform apply
+      inputs:
+        azureSubscription: $(serviceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -e
+          terraform -version || (curl -L https://releases.hashicorp.com/terraform/1.8.5/terraform_1.8.5_linux_amd64.zip -o tf.zip && sudo unzip -o tf.zip -d /usr/local/bin)
+
+          cd "$(Build.SourcesDirectory)/tfplan-bundle/infra"
+          # Local state again (this job runs on a fresh agent)
+          terraform init
+
+          # Apply the exact saved plan (lives one folder up in tfplan-bundle)
+          terraform apply -input=false -auto-approve ../tfplan
+
+          echo "Deployed storage account: $(cat ../sa_name.txt)"
