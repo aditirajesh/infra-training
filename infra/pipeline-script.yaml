@@ -25,11 +25,9 @@ stages:
     - task: AzureCLI@2
       displayName: Azure login + terraform init/validate
       inputs:
-        azureSubscription: $(serviceConnection)
         scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          set -e
+        script: |
+          az login
           # Ensure terraform present (hosted agents usually have it)
           terraform -version || (curl -L https://releases.hashicorp.com/terraform/1.8.5/terraform_1.8.5_linux_amd64.zip -o tf.zip && sudo unzip -o tf.zip -d /usr/local/bin)
           cd "$(infra_dir)"
