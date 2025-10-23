@@ -34,13 +34,7 @@ stages:
         inlineScript: |
           set -euo pipefail
 
-          # Login with Managed Identity (UAI if provided, else SAI)
-          if [[ -n "${userAssignedClientId:-}" ]]; then
-            az login --identity --username "$userAssignedClientId" --tenant "$tenantId"
-          else
-            az login --identity --tenant "$tenantId"
-          fi
-          az account set --subscription "$subscriptionId"
+          az login
 
           # Ensure terraform present
           terraform -version || (curl -L https://releases.hashicorp.com/terraform/1.8.5/terraform_1.8.5_linux_amd64.zip -o tf.zip && sudo unzip -o tf.zip -d /usr/local/bin)
@@ -77,13 +71,7 @@ stages:
         inlineScript: |
           set -euo pipefail
 
-          # MI login
-          if [[ -n "${userAssignedClientId:-}" ]]; then
-            az login --identity --username "$userAssignedClientId" --tenant "$tenantId"
-          else
-            az login --identity --tenant "$tenantId"
-          fi
-          az account set --subscription "$subscriptionId"
+          az login
 
           # Tooling
           terraform -version || (curl -L https://releases.hashicorp.com/terraform/1.8.5/terraform_1.8.5_linux_amd64.zip -o tf.zip && sudo unzip -o tf.zip -d /usr/local/bin)
@@ -153,13 +141,7 @@ stages:
         inlineScript: |
           set -euo pipefail
 
-          # MI login
-          if [[ -n "${userAssignedClientId:-}" ]]; then
-            az login --identity --username "$userAssignedClientId" --tenant "$tenantId"
-          else
-            az login --identity --tenant "$tenantId"
-          fi
-          az account set --subscription "$subscriptionId"
+          az login
 
           terraform -version || (curl -L https://releases.hashicorp.com/terraform/1.8.5/terraform_1.8.5_linux_amd64.zip -o tf.zip && sudo unzip -o tf.zip -d /usr/local/bin)
 
