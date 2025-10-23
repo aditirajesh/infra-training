@@ -39,14 +39,6 @@ stages:
           # Ensure terraform present
           terraform -version || (curl -L https://releases.hashicorp.com/terraform/1.8.5/terraform_1.8.5_linux_amd64.zip -o tf.zip && sudo unzip -o tf.zip -d /usr/local/bin)
 
-          # Export env vars for azurerm provider MSI auth
-          export ARM_USE_MSI=true
-          export ARM_SUBSCRIPTION_ID="$subscriptionId"
-          export ARM_TENANT_ID="$tenantId"
-          if [[ -n "${userAssignedClientId:-}" ]]; then
-            export ARM_CLIENT_ID="$userAssignedClientId"
-          fi
-
           cd "$(infra_dir)"
           terraform init
           terraform fmt -check
@@ -75,14 +67,6 @@ stages:
 
           # Tooling
           terraform -version || (curl -L https://releases.hashicorp.com/terraform/1.8.5/terraform_1.8.5_linux_amd64.zip -o tf.zip && sudo unzip -o tf.zip -d /usr/local/bin)
-
-          # Terraform MSI auth env
-          export ARM_USE_MSI=true
-          export ARM_SUBSCRIPTION_ID="$subscriptionId"
-          export ARM_TENANT_ID="$tenantId"
-          if [[ -n "${userAssignedClientId:-}" ]]; then
-            export ARM_CLIENT_ID="$userAssignedClientId"
-          fi
 
           cd "$(infra_dir)"
           terraform init
@@ -144,14 +128,6 @@ stages:
           az login
 
           terraform -version || (curl -L https://releases.hashicorp.com/terraform/1.8.5/terraform_1.8.5_linux_amd64.zip -o tf.zip && sudo unzip -o tf.zip -d /usr/local/bin)
-
-          # Terraform MSI auth env
-          export ARM_USE_MSI=true
-          export ARM_SUBSCRIPTION_ID="$subscriptionId"
-          export ARM_TENANT_ID="$tenantId"
-          if [[ -n "${userAssignedClientId:-}" ]]; then
-            export ARM_CLIENT_ID="$userAssignedClientId"
-          fi
 
           cd "$(Build.SourcesDirectory)/tfplan-bundle/infra"
           terraform init
