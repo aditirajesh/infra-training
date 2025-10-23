@@ -7,13 +7,6 @@ pool:
 
 variables:
 - group: tf-common
-# Expect these in your tf-common variable group:
-#   subscriptionId   = <YOUR_SUBSCRIPTION_ID>
-#   tenantId         = <YOUR_TENANT_ID>
-# Optional (only if you use a user-assigned identity):
-#   userAssignedClientId = <CLIENT_ID_OF_UAI>
-#   infra_dir        = <relative/path/to/terraform/dir>
-#   rg_name, location, base_sa ... (whatever you already had)
 
 stages:
 # ================
